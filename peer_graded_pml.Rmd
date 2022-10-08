@@ -1,0 +1,168 @@
+---
+title: "Peer-Graded Machine Learning Course Project"
+author: "Pratyaksh Gupta"
+date: "2022-10-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### [Background Info:]{.underline}
+
+Using devices such as *Jawbone Up*, *Nike FuelBand*, and *Fitbit* it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement -- a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how *much* of a particular activity they do, but they rarely quantify *how well they do it*. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: <http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har> (see the section on the Weight Lifting Exercise Dataset).
+
+[Data:]{.underline}
+
+The training data for this project are available here:
+
+[[https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv]{.underline}](https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv)
+
+The test data are available here:
+
+<https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv>
+
+The data for this project come from this source: <http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har>. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.
+
+------------------------------------------------------------------------
+
+### [Solution:]{.underline}
+
+## Data Preprocessing
+
+#### Loading Libraries
+
+```{r}
+library(knitr)
+```
+
+```{r}
+library(caret)
+```
+
+```{r}
+library(rpart)
+library(rpart.plot)
+```
+
+```{r}
+library(rattle)
+```
+
+```{r}
+library(randomForest)
+```
+
+```{r}
+library(corrplot)
+```
+
+```{r}
+set.seed(1234)
+```
+
+### Analysing and Cleaning Data
+
+```{r}
+traincsv <- read.csv("C:/Users/onchainengineer/OneDrive/Documents/RStudio/Practical Machine Learning/practical_machine_learning_course_project/Data/Training/pml-training.csv")
+testcsv <- read.csv("C:/Users/onchainengineer/OneDrive/Documents/RStudio/Practical Machine Learning/practical_machine_learning_course_project/Data/Testing/pml-testing.csv")
+
+dim(traincsv)
+```
+
+```{r}
+dim(testcsv)
+```
+
+```{r}
+traincsv <- traincsv[,colMeans(is.na(traincsv)) < .9] 
+traincsv <- traincsv[,-c(1:7)] 
+
+nvz <- nearZeroVar(traincsv)
+traincsv <- traincsv[,-nvz]
+dim(traincsv)
+```
+
+```{r}
+inTrain <- createDataPartition(y=traincsv$classe, p=0.7, list=F)
+train <- traincsv[inTrain,]
+valid <- traincsv[-inTrain,]
+
+control <- trainControl(method="cv", number=3, verboseIter=F)
+```
+
+### Representation of Predictions
+
+For this Project, three prediction methods are utilized namely:
+
+-   **Random Forests**
+
+```{r}
+mod_rf <- train(classe~., data=train, method="rf", trControl = control, tuneLength = 5)
+
+pred_rf <- predict(mod_rf, valid)
+cmrf <- confusionMatrix(pred_rf, factor(valid$classe))
+cmrf
+```
+
+**Plot**
+
+```{r}
+plot(mod_rf)
+```
+
+-   [**Decision Trees**]{.underline}
+
+```{r}
+mod_trees <- train(classe~., data=train, method="rpart", trControl = control, tuneLength = 5)
+fancyRpartPlot(mod_trees$finalModel)
+```
+
+[**Prediction**]{.underline}
+
+```{r}
+pred_trees <- predict(mod_trees, valid)
+cmtrees <- confusionMatrix(pred_trees, factor(valid$classe))
+cmtrees
+```
+
+-   [**Generalized Boosted Model (GBM)**]{.underline}
+
+```{r}
+mod_gbm <- train(classe~., data=train, method="gbm", trControl = control, tuneLength = 5, verbose = F)
+
+pred_gbm <- predict(mod_gbm, valid)
+cmgbm <- confusionMatrix(pred_gbm, factor(valid$classe))
+cmgbm
+```
+
+[**Plot**]{.underline}
+
+```{r}
+plot(mod_gbm)
+```
+
+------------------------------------------------------------------------
+
+### Random Forest Processing Extended
+
+```{r}
+pred <- predict(mod_rf, testcsv)
+print(pred)
+```
+
+------------------------------------------------------------------------
+
+### Appendix
+
+```{r}
+corrPlot <- cor(train[, -length(names(train))])
+corrplot(corrPlot, method="color")
+```
+
+```{r}
+plot(mod_trees)
+```
+
+------------------------------------------------------------------------
